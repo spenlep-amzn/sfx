@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Agents Dashboard 👾</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <header class="page-header">
+    <h1>Agents Dashboard</h1>
+    <p class="muted status-line"><span id="updated"></span></p>
+  </header>
+  <div id="sessions"></div>
+  <p class="muted" id="empty">Loading…</p>
+
+  <!-- ===================== DEMO MODE (delete the script block below, up to END DEMO MODE, to remove) =====================
+       Active only when the URL contains ?demo. Replaces fetch() for the two dashboard endpoints with
+       generated mock data on a 60s loop: 3 sessions, nested subagents 3 levels deep, scheduled jobs,
+       statuses that change over time, and one session that closes and reopens. -->
+  <script>
+    (() => {
+      if (!new URLSearchParams(location.search).has('demo')) return;
+
+      const t0 = Date.now();
+      const PERIOD = 60; // seconds; the scripted timeline loops
+      const cyc = () => ((Date.now() - t0) / 1000) % PERIOD;
+      const elapsed = () => (Date.now() - t0) / 1000;
+
+      // schedule: [[secondIntoCycle, status], ...] sorted ascending
+      const at = (schedule, t) => {
+        let s = schedule[0][1];
+        for (const [sec, st] of schedule) if (t >= sec) s = st;
+        return s;
+      };
+
+      // Compact subagent spec: [id, type, description, appearAt, schedule, children]
+      const A = (id, type, desc, appear, schedule, children = []) => ({ id, type, desc, appear, schedule, children });
+
+      const sessions = [
+        {
+          sessionId: '3f9a1c2e-7b44-4d1a-9c55-0e8f2a6b1d73', pid: 41021, name: 'refactor-auth',
+          cwd: '/Users/demo/workplace/api', costBase: 0.84, costRate: 0.006, unpriced: [],
+          schedule: [[0, 'working'], [24, 'permission'], [31, 'working'], [52, 'idle']],
+          present: () => true,
+          agents: [
+            A('a1', 'Explore', 'Map auth module call sites', 0, [[0, 'running'], [15, 'completed']], [
+              A('a1-1', 'general-purpose', 'Scan middleware', 2, [[0, 'running'], [9, 'completed']]),
+              A('a1-2', 'general-purpose', 'Scan route handlers', 3, [[0, 'running'], [12, 'completed']]),
+            ]),
+            A('a2', 'Plan', 'Design token refresh flow', 6, [[0, 'running'], [32, 'completed']], [
+              A('a2-1', 'general-purpose', 'Review OAuth spec', 9, [[0, 'running'], [22, 'completed']], [
+                A('a2-1-1', 'Explore', 'Fetch RFC 6749 sections', 11, [[0, 'running'], [18, 'completed']]),
+                A('a2-1-2', 'Explore', 'Compare PKCE libraries', 12, [[0, 'running'], [20, 'failed']]),
+              ]),
+              A('a2-2', 'general-purpose', 'Draft migration plan', 16, [[0, 'running'], [30, 'completed']]),
+            ]),
+            A('a3', 'general-purpose', 'Write unit tests for refresh', 34, [[0, 'running'], [55, 'completed']]),
+          ],
+          jobs: [
+            { id: 'j-7c1e', cron: '*/10 * * * *', humanSchedule: 'every 10 minutes', prompt: 'Check PR review comments and reply', recurring: true, every: 10 },
+            { id: 'j-02aa', cron: '0 2 * * *', humanSchedule: 'daily at 2:00 AM', prompt: 'Run nightly regression suite and post summary', recurring: true, every: 60 * 9 },
+          ],
+        },
+        {
+          sessionId: 'b72d0e91-5a3c-4f88-8d21-6c4e9f0a2b15', pid: 41877, name: 'docs-site translations',
+          cwd: '/Users/demo/workplace/docs', costBase: 3.47, costRate: 0.009, unpriced: ['claude-experimental-x'],
+          schedule: [[0, 'question'], [14, 'working'], [44, 'idle']],
+          present: () => true,
+          agents: [
+            A('b1', 'general-purpose', 'Translate: Getting started', 0, [[0, 'completed']]),
+            A('b2', 'general-purpose', 'Translate: API reference', 0, [[0, 'running'], [28, 'completed']]),
+            A('b3', 'Plan', 'Translate: Tutorials', 0, [[0, 'running'], [40, 'completed']], [
+              A('b3-1', 'general-purpose', 'Tutorial 1: Hello world', 4, [[0, 'running'], [20, 'completed']], [
+                A('b3-1-1', 'Explore', 'Check code samples compile', 8, [[0, 'running'], [17, 'completed']]),
+              ]),
+              A('b3-2', 'general-purpose', 'Tutorial 2: Deploying', 10, [[0, 'running'], [26, 'interrupted'], [27, 'running'], [38, 'completed']]),
+            ]),
+            A('b4', 'general-purpose', 'Translate: FAQ', 0, [[0, 'running'], [18, 'killed']]),
+            A('b5', 'general-purpose', 'Translate: Changelog', 5, [[0, 'running'], [33, 'completed']]),
+            A('b6', 'general-purpose', 'Translate: Glossary', 12, [[0, 'running'], [45, 'completed']]),
+            A('b7', 'Explore', 'Lint all translated pages', 42, [[0, 'running'], [58, 'completed']]),
+          ],
+          jobs: [
+            { id: 'j-9f30', cron: '30 * * * *', humanSchedule: null, prompt: 'Sync glossary from upstream', recurring: true, every: 45 },
+          ],
+        },
+        {
+          sessionId: 'e04c6b3d-2f19-4a70-b6e2-91d7c5a83f40', pid: 42310, name: null,
+          cwd: '/Users/demo/scratch', costBase: 0.12, costRate: 0.002, unpriced: [],
+          schedule: [[0, 'working'], [18, 'permission'], [30, 'working']],
+          present: () => cyc() < 45, // closes at 45s, reopens next loop
+          agents: [],
+          jobs: [],
+        },
+      ];
+
+      const startedAt = t0 - 25 * 60000;
+
+      function buildAgents(specs, t) {
+        return specs.filter((a) => t >= a.appear).map((a) => ({
+          agentId: `agent-${a.id}`,
+          agentType: a.type,
+          description: a.desc,
+          status: at(a.schedule, t - a.appear),
+          startedAt: t0 + a.appear * 1000,
+          lastActivityAt: Date.now(),
+          children: buildAgents(a.children, t),
+        }));
+      }
+
+      function base(s, t) {
+        const status = at(s.schedule, t);
+        return {
+          sessionId: s.sessionId, pid: s.pid, name: s.name, cwd: s.cwd, startedAt,
+          status, reportedStatus: status, logPath: `/Users/demo/.claude/projects/${s.sessionId}.jsonl`,
+        };
+      }
+
+      function detail(id) {
+        const s = sessions.find((x) => x.sessionId === id);
+        if (!s || !s.present()) return { sessionId: id, status: 'closed' };
+        const t = cyc();
+        const now = Date.now();
+        return {
+          ...base(s, t),
+          subagents: buildAgents(s.agents, t),
+          scheduledJobs: s.jobs.map((j) => ({
+            id: j.id, cron: j.cron, humanSchedule: j.humanSchedule, prompt: j.prompt, recurring: j.recurring,
+            createdAt: t0,
+            nextRunAt: t0 + Math.ceil((now - t0 + 1) / (j.every * 60000)) * j.every * 60000,
+          })),
+          cost: { usd: s.costBase + elapsed() * s.costRate, unpricedModels: s.unpriced },
+        };
+      }
+
+      function list() {
+        const t = cyc();
+        const live = sessions.filter((s) => s.present());
+        return { fetchedAt: Date.now(), sessionIds: live.map((s) => s.sessionId), sessions: live.map((s) => base(s, t)) };
+      }
+
+      const json = (obj) => new Response(JSON.stringify(obj), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      const realFetch = window.fetch.bind(window);
+      window.fetch = async (input, init) => {
+        const url = typeof input === 'string' ? input : input.url;
+        const path = new URL(url, location.href).pathname;
+        if (path === '/fetch-session-ids') return json(list());
+        const m = path.match(/^\/fetch-single-session\/(.+)$/);
+        if (m) return json(detail(decodeURIComponent(m[1])));
+        return realFetch(input, init);
+      };
+
+      const badge = document.createElement('span');
+      badge.className = 'demo-badge';
+      badge.textContent = 'DEMO';
+      document.querySelector('.page-header h1').append(badge);
+    })();
+  </script>
+  <!-- =================================== END DEMO MODE =================================== -->
+
+  <script>
+    const PER_SESSION_POLL = 2000; // ms
+    const ALL_SESSIONS_POLL = 5000; // ms
+
+    const LIST_POLL_MS = ALL_SESSIONS_POLL;   // parent: discovers new sessions, drops closed ones
+    const SESSION_POLL_MS = PER_SESSION_POLL; // each div: refreshes its own status
+
+    const container = document.getElementById('sessions');
+    const empty = document.getElementById('empty');
+    const updated = document.getElementById('updated');
+
+    // Small DOM helper: h('span', 'cls', 'text')
+    function h(tag, className, text) {
+      const el = document.createElement(tag);
+      if (className) el.className = className;
+      if (text != null) el.textContent = text;
+      return el;
+    }
+
+    // Returns an SVG ring that drains over `ms`; call restart() each time a poll fires.
+    function createPollRing(ms) {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'poll-ring');
+      svg.setAttribute('viewBox', '0 0 16 16');
+      svg.style.setProperty('--poll-ms', `${ms}ms`);
+      svg.innerHTML =
+        '<circle class="track" cx="8" cy="8" r="6.5" />' +
+        '<circle class="progress" cx="8" cy="8" r="6.5" pathLength="100" />';
+      const progress = svg.querySelector('.progress');
+      return {
+        el: svg,
+        restart() {
+          progress.style.animation = 'none';
+          progress.getBoundingClientRect(); // force reflow so the animation starts over
+          progress.style.animation = '';
+        },
+      };
+    }
+
+    const listRing = createPollRing(LIST_POLL_MS);
+    updated.after(listRing.el);
+
+    // sessionId -> { el, timer }
+    const mounted = new Map();
+
+    // A node pill for the org chart: status dot + title + sub-line.
+    function createNode(extraClass) {
+      const node = h('div', `node${extraClass ? ' ' + extraClass : ''}`);
+      const text = h('span', 'node-text');
+      text.append(h('span', 'node-title'), h('span', 'node-sub'));
+      node.append(h('span', 'dot'), text);
+      return node;
+    }
+
+    function setNode(node, status, title, sub, tooltip) {
+      node.querySelector('.dot').dataset.s = status;
+      node.querySelector('.node-title').textContent = title;
+      node.querySelector('.node-sub').textContent = sub;
+      node.title = tooltip;
+    }
+
+    // Updates the text header and the root node of the chart. `ui` holds the card's element refs.
+    function render(ui, s) {
+      ui.cost.textContent = s.cost ? `$${s.cost.usd.toFixed(2)}` : '';
+      ui.cost.title = s.cost?.unpricedModels.length ? `Cost excludes unpriced models: ${s.cost.unpricedModels.join(', ')}` : '';
+      ui.sid.textContent = s.sessionId;
+      ui.dot.dataset.s = s.status;
+      ui.status.textContent = s.status;
+      ui.name.textContent = s.name ?? '';
+      setNode(ui.root, s.status, s.name ?? 'Session', `${s.sessionId.slice(0, 8)} · ${s.status}`,
+        `session · ${s.sessionId}${s.cwd ? '\n' + s.cwd : ''}`);
+    }
+
+    const FADE_OUT_MS = 200; // keep in sync with .leaving in styles.css
+
+    // Fades an element out, then removes it. The timeout covers cases where animationend never fires.
+    function fadeOut(el) {
+      if (el.classList.contains('leaving')) return;
+      el.classList.add('leaving');
+      const remove = () => el.remove();
+      // animationend bubbles (e.g. from the poll ring), so only react to this element's own fade
+      el.addEventListener('animationend', (e) => e.target === el && remove());
+      setTimeout(remove, FADE_OUT_MS + 50);
+    }
+
+    // Keyed update of container's children: existing elements are updated in place, new ones created,
+    // and ones no longer in `items` fade out.
+    function reconcile(container, items, key, create, update) {
+      const existing = new Map();
+      for (const el of container.children) if (!el.classList.contains('leaving')) existing.set(el.dataset.key, el);
+      let prev = null;
+      for (const item of items) {
+        const k = key(item);
+        let el = existing.get(k);
+        if (el) existing.delete(k);
+        else (el = create(item)).dataset.key = k;
+        update(el, item);
+        const next = prev ? prev.nextElementSibling : container.firstElementChild;
+        if (el !== next) container.insertBefore(el, next);
+        prev = el;
+      }
+      for (const el of existing.values()) fadeOut(el);
+    }
+
+    // Org chart: one <li> per sub-agent (node pill + <ul> of its children), connectors drawn in CSS.
+    function renderTree(ul, nodes) {
+      reconcile(ul, nodes, (n) => n.agentId,
+        () => {
+          const li = document.createElement('li');
+          li.append(createNode(), h('ul', 'kids'));
+          return li;
+        },
+        (li, n) => {
+          const [node, kids] = li.children;
+          const type = n.agentType ?? 'agent';
+          li.className = `s-${n.status}`;
+          setNode(node, n.status, n.description ?? n.agentId, `${type} · ${n.status}`,
+            `${n.description ? n.description + '\n' : ''}${type} · ${n.agentId}`);
+          renderTree(kids, n.children ?? []);
+        });
+    }
+
+    // Overlay for running edges: one continuous dashed path from each running agent's parent to it.
+    // Paths are updated in place (not recreated) so the dash animation doesn't restart every poll.
+    function createWires() {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('class', 'wires');
+      svg.innerHTML = '<path class="wire-halo" /><path class="wire" />';
+      return svg;
+    }
+
+    function drawWires(tree, svg) {
+      // Position relative to .tree via offsets, which ignore the node-in transform animation.
+      const at = (el) => {
+        let x = 0, y = 0;
+        for (let e = el; e && e !== tree; e = e.offsetParent) { x += e.offsetLeft; y += e.offsetTop; }
+        return { x, y, w: el.offsetWidth, h: el.offsetHeight };
+      };
+      let d = '';
+      for (const li of tree.querySelectorAll('li.s-running')) {
+        if (li.closest('.leaving')) continue;
+        const p = at(li.parentElement.previousElementSibling); // parent's node pill
+        const c = at(li.firstElementChild);                    // this agent's node pill
+        const trunk = at(li).x + 1;                            // the vertical bus sits on li's left edge
+        d += `M${p.x + p.w},${p.y + p.h / 2}H${trunk}V${c.y + c.h / 2}H${c.x}`;
+      }
+      for (const path of svg.children) path.setAttribute('d', d);
+    }
+
+    // One nested div per sub-agent; children render inside their parent's div.
+    function renderSubagents(container, nodes) {
+      reconcile(container, nodes, (n) => n.agentId,
+        () => {
+          const el = document.createElement('div');
+          const label = h('span', 'sa-label');
+          label.append(h('span', 'dot'), h('span', 'sa-desc'), h('span', 'sa-status'));
+          el.append(label, document.createElement('div'));
+          return el;
+        },
+        (el, n) => {
+          const [label, children] = el.children;
+          const [dot, desc, status] = label.children;
+          el.className = `subagent status-${n.status}`;
+          dot.dataset.s = n.status;
+          desc.textContent = n.description ?? n.agentId;
+          status.textContent = n.status;
+          label.title = `${n.agentType ?? 'agent'} · ${n.agentId}`;
+          renderSubagents(children, n.children ?? []);
+        });
+    }
+
+    function formatIn(ms) {
+      if (ms <= 0) return 'due now';
+      const mins = Math.round(ms / 60000);
+      if (mins < 1) return 'in <1 min';
+      if (mins < 60) return `in ${mins} min${mins === 1 ? '' : 's'}`;
+      const hours = Math.round(mins / 60);
+      if (hours < 48) return `in ${hours} hour${hours === 1 ? '' : 's'}`;
+      return `in ${Math.round(hours / 24)} days`;
+    }
+
+    function renderScheduled(container, jobs) {
+      reconcile(container, jobs, (j) => j.id,
+        () => {
+          const el = document.createElement('div');
+          el.append(h('span', 'job-tag', 'Scheduled'), h('span', 'job-name'), h('span', 'job-when'));
+          return el;
+        },
+        (el, j) => {
+          el.querySelector('.job-name').textContent = j.prompt;
+          el.querySelector('.job-when').textContent = j.nextRunAt == null ? '' : formatIn(j.nextRunAt - Date.now());
+          el.title = `${j.humanSchedule ?? j.cron} · job ${j.id}`;
+        });
+    }
+
+    function updateEmpty() {
+      empty.textContent = mounted.size ? '' : 'No active sessions.';
+    }
+
+    function mount(session) {
+      const el = h('div', 'session');
+      el.dataset.sessionId = session.sessionId;
+
+      // Org chart (session root + nested sub-agents)
+      const viz = h('div', 'viz');
+      const tree = h('div', 'tree');
+      const rootBranch = h('div', 'branch');
+      const root = createNode('root');
+      const kids = h('ul', 'kids');
+      rootBranch.append(root, kids);
+      const wires = createWires();
+      tree.append(rootBranch, wires);
+      viz.append(tree);
+      // Redraw when the tree reflows, e.g. after a removed node finishes fading out
+      new ResizeObserver(() => drawWires(tree, wires)).observe(tree);
+
+      // Metadata line (cost, id, status, name) sits above the chart
+      const header = h('div', 'session-header');
+      const ui = {
+        root, kids,
+        cost: h('span', 'cost'),
+        sid: h('span', 'sid'),
+        dot: h('span', 'dot'),
+        status: h('span'),
+        name: h('span', 'sname'),
+      };
+      const statusWrap = h('span', 'sstatus');
+      statusWrap.append(ui.dot, ui.status);
+      const ring = createPollRing(SESSION_POLL_MS);
+      header.append(ui.cost, statusWrap, ui.name, ui.sid, ring.el);
+      // Text details (nested sub-agent list, scheduled jobs), hidden until expanded
+      const details = h('div', 'details');
+      details.hidden = true;
+      const subagents = h('div', 'subagents');
+      const scheduled = h('div', 'scheduled');
+      details.append(subagents, scheduled);
+
+      const toggle = h('button', 'expand-toggle');
+      toggle.type = 'button';
+      toggle.setAttribute('aria-expanded', 'false');
+      const toggleLabel = h('span', null, 'Expand');
+      toggle.append(toggleLabel, h('span', 'chevron'));
+      toggle.addEventListener('click', () => {
+        const open = details.hidden;
+        details.hidden = !open;
+        toggle.setAttribute('aria-expanded', String(open));
+        toggleLabel.textContent = open ? 'Collapse' : 'Expand';
+      });
+
+      el.append(header, viz, details, toggle);
+      render(ui, session);
+      container.appendChild(el);
+
+      const timer = setInterval(async () => {
+        ring.restart();
+        try {
+          const res = await fetch(`/fetch-single-session/${encodeURIComponent(session.sessionId)}`);
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || res.statusText);
+          if (data.status === 'closed') return unmount(session.sessionId);
+          if (!mounted.has(session.sessionId)) return;
+          render(ui, data);
+          renderTree(kids, data.subagents ?? []);
+          drawWires(tree, wires);
+          renderSubagents(subagents, data.subagents ?? []);
+          renderScheduled(scheduled, data.scheduledJobs ?? []);
+        } catch (err) {
+          console.warn(`poll failed for ${session.sessionId}:`, err);
+        }
+      }, SESSION_POLL_MS);
+
+      mounted.set(session.sessionId, { el, timer });
+      updateEmpty();
+    }
+
+    function unmount(sessionId) {
+      const entry = mounted.get(sessionId);
+      if (!entry) return;
+      clearInterval(entry.timer);
+      fadeOut(entry.el);
+      mounted.delete(sessionId);
+      updateEmpty();
+    }
+
+    async function refreshList() {
+      listRing.restart();
+      try {
+        const res = await fetch('/fetch-session-ids');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || res.statusText);
+
+        // Any mounted session missing from the list has closed.
+        const live = new Set(data.sessionIds);
+        for (const id of [...mounted.keys()]) if (!live.has(id)) unmount(id);
+        for (const s of data.sessions) if (!mounted.has(s.sessionId)) mount(s);
+
+        updateEmpty();
+        updated.textContent = `Updated ${new Date(data.fetchedAt).toLocaleTimeString()}`;
+      } catch (err) {
+        updated.textContent = `Error: ${err.message}`;
+      }
+    }
+
+    refreshList();
+    setInterval(refreshList, LIST_POLL_MS);
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,568 @@
+/*
+ * Theme v4: "Clean light control room"
+ * Palette:
+ *   page      #ffffff   white background
+ *   card      #f3f5f8   light-grey session cards (border #e2e7ee)
+ *   ink       #0f2a4a   deep navy: structure, headers, session root node
+ *   text      #1c2733   body text          muted #6b7888
+ *   live      #1e9bd7   bright cyan-blue: running connectors, poll rings
+ *   line      #c3cedb   tree connectors
+ *   semantic  green #1f9d55 / orange #e08a00 / red #d64545 / dim #a7b1bd (status dots, cost)
+ */
+
+:root {
+  --bg: #ffffff;
+  --card: #f3f5f8;
+  --card-border: #e2e7ee;
+  --panel: #ffffff;
+  --ink: #0f2a4a;
+  --text: #1c2733;
+  --muted: #6b7888;
+  --live: #1e9bd7;
+  --live-soft: #e2f2fb;
+  --line: #c3cedb;
+  --green: #1f9d55;
+  --orange: #e08a00;
+  --red: #d64545;
+  --dim: #a7b1bd;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --gap-x: 18px; /* connector stub length; parent-to-child distance is 2x this */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  margin: 0;
+  padding: 1.75rem 2rem 3rem;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ---------- Page header ---------- */
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 1rem;
+  margin-bottom: 1.25rem;
+  border-bottom: 2px solid var(--ink);
+}
+
+.page-header h1 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.page-header h1::before {
+  content: "";
+  width: 6px;
+  height: 1.3em;
+  border-radius: 2px;
+  background: var(--live);
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 0.9em;
+}
+
+.status-line {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+#empty {
+  text-align: center;
+  padding: 3rem 0;
+}
+
+#empty:empty {
+  display: none;
+}
+
+/* ---------- Session card ---------- */
+
+.session {
+  background: var(--card);
+  border: 1px solid var(--card-border);
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+/* TOP: left-to-right tree, pinned left; deep nesting overflows into a horizontal scroll */
+.viz {
+  overflow-x: auto;
+  padding: 16px 16px 16px;
+  background-color: var(--panel);
+  background-image: radial-gradient(#e6ebf1 1px, transparent 1px);
+  background-size: 16px 16px;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.tree {
+  position: relative; /* offset parent for node positions and the .wires overlay */
+  width: max-content;
+  display: flex;
+}
+
+/* Running edges: continuous dashed path drawn over the grey CSS connectors (see drawWires) */
+.wires {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.wires path {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.wires .wire-halo {
+  stroke: var(--live-soft);
+  stroke-width: 6;
+}
+
+.wires .wire {
+  stroke: var(--live);
+  stroke-dasharray: 4 4;
+  animation: wire-flow 600ms linear infinite;
+}
+
+/* Each level is a row: node on the left, its children stacked in a column to the right */
+.branch,
+.tree li {
+  display: flex;
+  align-items: center;
+}
+
+.tree ul.kids {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0 0 0 var(--gap-x);
+  position: relative;
+  list-style: none;
+}
+
+.tree ul.kids:empty {
+  display: none;
+}
+
+/* Horizontal stub from the parent node to the vertical bus */
+.tree ul.kids::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: calc(50% - 1px);
+  width: var(--gap-x);
+  height: 2px;
+  background: var(--line);
+}
+
+.tree li {
+  position: relative;
+  padding: 4px 0 4px var(--gap-x);
+}
+
+/* Vertical bus: each child draws the upper and lower half beside itself */
+.tree li::before,
+.tree li::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  height: 50%;
+  border-left: 2px solid var(--line);
+}
+
+.tree li::before {
+  top: 0;
+}
+
+.tree li::after {
+  bottom: 0;
+}
+
+.tree li:first-child::before,
+.tree li:last-child::after,
+.tree li:only-child::before,
+.tree li:only-child::after {
+  display: none;
+}
+
+/* ---------- Nodes ---------- */
+
+.node {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 5px 12px 5px 10px;
+  background: #fff;
+  border: 1px solid #d3dbe5;
+  border-radius: 999px;
+  box-shadow: 0 1px 2px rgba(15, 42, 74, 0.06);
+  white-space: nowrap;
+  animation: node-in 300ms ease-out;
+}
+
+/* Horizontal stem from the bus into each child node */
+.tree li > .node::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--gap-x) - 1px);
+  top: calc(50% - 1px);
+  width: calc(var(--gap-x) + 1px);
+  height: 2px;
+  background: var(--line);
+}
+
+/* Running: cyan border (its edge is drawn by the .wires overlay) */
+.tree li.s-running > .node {
+  border-color: var(--live);
+  box-shadow: 0 0 0 3px var(--live-soft);
+}
+
+.tree li.s-completed > .node,
+.tree li.s-interrupted > .node {
+  color: var(--muted);
+}
+
+.tree li.s-failed > .node,
+.tree li.s-killed > .node {
+  border-color: #efc3c3;
+}
+
+.node-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.node-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  max-width: 24ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.node-sub {
+  font-size: 0.68rem;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+/* Session root node: solid navy */
+.node.root {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: #fff;
+  border-radius: 10px;
+  padding: 8px 16px 8px 12px;
+  box-shadow: 0 2px 6px rgba(15, 42, 74, 0.25);
+}
+
+.node.root .node-title {
+  font-size: 0.95rem;
+  max-width: 36ch;
+}
+
+.node.root .node-sub {
+  color: #9fb4cc;
+}
+
+/* ---------- Status icons ----------
+ * The robot SVG is used as a mask, so the element's background color becomes the icon's fill.
+ * Status rules below only need to set `background`. */
+
+.dot {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  background: var(--dim);
+  -webkit-mask: url("robot-icon.svg") center / contain no-repeat;
+  mask: url("robot-icon.svg") center / contain no-repeat;
+}
+
+.dot[data-s="working"],
+.dot[data-s="running"] {
+  background: var(--green);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+
+.dot[data-s="permission"],
+.dot[data-s="question"] {
+  background: var(--orange);
+}
+
+.dot[data-s="failed"],
+.dot[data-s="killed"] {
+  background: var(--red);
+}
+
+.node.root .dot {
+  width: 18px;
+  height: 18px;
+}
+
+/* ---------- Metadata line (top of card) ---------- */
+
+.session-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  flex-wrap: wrap;
+  padding: 0.65rem 1.1rem;
+  border-bottom: 1px solid var(--card-border);
+}
+
+/* ---------- Collapsible text details (below chart) ---------- */
+
+.details {
+  padding: 0.75rem 1.1rem 0.9rem;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--card-border);
+}
+
+.details > .subagents > .subagent:first-child {
+  margin-top: 0;
+}
+
+/* Full-width expand bar, label + chevron right-aligned */
+.expand-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.45rem 1.1rem;
+  border: 0;
+  background: #e9edf2;
+  color: var(--muted);
+  font: 600 0.75rem system-ui, sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.expand-toggle:hover {
+  background: #dfe5ec;
+  color: var(--ink);
+}
+
+.expand-toggle:focus-visible {
+  outline: 2px solid var(--live);
+  outline-offset: -2px;
+}
+
+.chevron {
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform 150ms ease;
+}
+
+.expand-toggle[aria-expanded="true"] .chevron {
+  transform: translateY(2px) rotate(-135deg);
+}
+
+.session-header .cost {
+  color: var(--red);
+  font-weight: 700;
+}
+
+.session-header .cost:empty {
+  display: none;
+}
+
+.session-header .sid {
+  color: var(--muted);
+}
+
+.session-header .sstatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--muted);
+}
+
+.session-header .sname {
+  color: var(--ink);
+  font-weight: 600;
+  font-family: system-ui, sans-serif;
+}
+
+.session-header .poll-ring {
+  margin-left: auto;
+}
+
+.subagent {
+  margin: 0.3rem 0 0 1.1rem;
+  padding-left: 0.65rem;
+  border-left: 2px solid #d6dde6;
+}
+
+.subagent.status-running {
+  border-left-color: var(--live);
+}
+
+.subagent > .sa-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.subagent:not(.status-running) > .sa-label {
+  color: var(--muted);
+}
+
+.sa-status {
+  font-family: var(--mono);
+  font-size: 0.75em;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.scheduled {
+  margin: 0.7rem 0 0 1.1rem;
+  color: var(--muted);
+}
+
+.scheduled:empty {
+  display: none;
+}
+
+.scheduled > div {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+.job-tag {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink);
+  background: #e3e9f1;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.job-name {
+  display: inline-block;
+  max-width: 44ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+  color: var(--text);
+}
+
+.job-when {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  color: var(--live);
+}
+
+/* Unmount: fade out, then JS removes the element (FADE_OUT_MS in index.html) */
+.leaving {
+  animation: fade-out 200ms ease-out forwards;
+  pointer-events: none;
+}
+
+/* ---------- Countdown ring ---------- */
+
+.poll-ring {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  transform: rotate(-90deg);
+}
+
+.poll-ring circle {
+  fill: none;
+  stroke-width: 2.5;
+}
+
+.poll-ring .track {
+  stroke: var(--live-soft);
+}
+
+.poll-ring .progress {
+  stroke: var(--live);
+  stroke-linecap: round;
+  stroke-dasharray: 100;
+  animation: poll-drain var(--poll-ms) linear forwards;
+}
+
+/* ---------- Demo badge (demo mode only) ---------- */
+
+.demo-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--live);
+  border: 1px solid var(--live);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+/* ---------- Keyframes ---------- */
+
+@keyframes poll-drain {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: 100; }
+}
+
+@keyframes fade-out {
+  to { opacity: 0; }
+}
+
+@keyframes node-in {
+  from { opacity: 0; transform: translateX(-4px); }
+}
+
+/* Dashes travel from parent toward child */
+@keyframes wire-flow {
+  to { stroke-dashoffset: -8; }
+}
+
+/* Box-shadow would be clipped by the icon mask, so running icons pulse in opacity instead */
+@keyframes pulse {
+  50% { opacity: 0.45; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dot,
+  .node,
+  .wires .wire {
+    animation: none;
+  }
+}

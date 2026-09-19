@@ -1,0 +1,178 @@
+{
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "elicitation_dialog|permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay > /dev/null 2>&1 && afplay /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/vine-boom.mp3 &"
+          }
+        ]
+      },
+      {
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay > /dev/null 2>&1 && afplay /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/cricket.mp3 &"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay > /dev/null 2>&1 && afplay /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/pluh.mp3 &"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay > /dev/null 2>&1 && afplay /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/enderman-teleport.mp3 &"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'skipping' &"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay > /dev/null 2>&1 && afplay /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/fahh.mp3 &"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay > /dev/null 2>&1 && afplay /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/among-us.mp3 &"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay > /dev/null 2>&1 && afplay -v 0.4 -r $(awk 'BEGIN{srand(); printf \"%.3f\", 0.98 + rand() * 0.08}') /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/minecraft-xp.mp3 &"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay > /dev/null 2>&1 && afplay /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/discord-join.mp3 &"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay > /dev/null 2>&1 && afplay /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/record-scratch.mp3 &"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay > /dev/null 2>&1 && afplay -v 0.25 -r $(awk 'BEGIN{srand(); printf \"%.3f\", 0.98 + rand() * 0.06}') /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/tool-call-blip.mp3 &"
+          }
+        ]
+      },
+      {
+        "matcher": "WebFetch|WebSearch",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay > /dev/null 2>&1 && afplay -v 0.4 /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/minecraft-eat.mp3 &"
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay > /dev/null 2>&1 && afplay -v 0.4 /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/ufo.mp3 &"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay > /dev/null 2>&1 && afplay -v 0.45 -r $(awk 'BEGIN{srand(); printf \"%.3f\", 0.97 + rand() * 0.06}') /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/file-edited-bing.mp3 &"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v afplay > /dev/null 2>&1 && afplay -v 0.45 -r $(awk 'BEGIN{srand(); printf \"%.3f\", 0.97 + rand() * 0.06}') /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/file-edited-bing.mp3 &"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "grep -Eq '\"command\": *\"([^\"]*(&&|\\|\\||;|\\|) *)?git +commit' && command -v afplay > /dev/null 2>&1 && { afplay /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/rizz.mp3 & }; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "grep -Eq '\"command\": *\"([^\"]*(&&|\\|\\||;|\\|) *)?git +push' && command -v afplay > /dev/null 2>&1 && { afplay /Users/notspencer/workplace/claude-poc-sfx/.claude/sfx/yoooooo.mp3 & }; exit 0"
+          }
+        ]
+      }
+    ]
+  },
+  "awaySummaryEnabled": false,
+  "voice": {
+    "enabled": true,
+    "mode": "hold"
+  },
+  "skipDangerousModePermissionPrompt": true,
+  "voiceEnabled": true,
+  "model": "opus"
+}
